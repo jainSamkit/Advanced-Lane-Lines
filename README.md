@@ -154,7 +154,7 @@ An example image that was run through the pipeline is shown below:
 
 [![Project video output](https://img.youtube.com/vi/nuaE2jed1nk/0.jpg)](https://youtu.be/nuaE2jed1nk)
 
-This same video can also be found at:  [project_video_out.mp4](./output/project_video_out.mp4)
+This same video can also be found at:  [project_video_out.mp4](./project_videos_output/result_video.mp4)
 
 ---
 ## Discussion
