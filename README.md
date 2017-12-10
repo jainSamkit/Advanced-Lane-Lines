@@ -179,4 +179,4 @@ The effect of reversing this order, by applying the perspective transform first 
 [image4]: ./figures/perpective.png "Warp Example"
 [image6]: ./figures/lane_mask.png "Lane masks"
 [image7]: ./figures/highlighted_lane.png "Output"
-[video1]: ./project_video_out.mp4 "Project video output"
+[video1]: ./project_videos_output/result_video.mp4 "Project video output"
