@@ -70,10 +70,9 @@ An example of an image before and after the distortion correction procedure is s
 
 Initially a number of combinations of color and gradient thresholds were attempted. It was found that none of these were very robust to changing conditions in lighting and contrast. After reviewing some literature on the subject, it was found that using a second derivative operation (Laplacian) might be more suited to this purpose[1]. By using a Laplacian filter (using `cv2.Laplacian`) on the image followed by thresholding it to highlight only the negative values (denoting a dark-bright-dark edge) it was possible to reject many of the false positives [ [Ref](http://www.eng.utah.edu/~hamburge/Road_Marking_Features_and_Processing_Steps.pdf) ]. The Laplacian resulted in better results than using combinations of Sobel gradients.
 
-The thresholding operations used to detect edges in the images can be found in lines 149-170 of `project_04.py` in the function called `find_edges`. The thresholded binary mask obtained from the Laplacian is named `mask_one` in the code. The thresholding is first performed on the S-channel of the image in HLS colorspace. If too few pixels were detected by this method (less than 1% of total number of pixels), then the Laplacian thresholding is attempted on the grayscale image.
+The thresholding operations used to detect edges in the images can be found `lane_lines.py` in the function called `gradient_color_thresh`. The gradient is applied in both x and y directions .Also magnitude of gradient and slopes i.e direction of the desired lines have been filtered out.Apart from this the color threshold is applied in S channel.I have also applied threshold in the L channel to remove dark areas in cases when there is overhead sun.
 
-The second thresholded mask, `mask_two`, is created using a simple threshold on the S-channel. And finally, a brightness mask (`gray_binary`) is used to reject any darker lines in the final result. These masks are combined as:
-`combined_mask = gray_binary AND (mask_one OR mask_two)`
+Morphological operation such as opening is also applied to remove noise from the lower portion of the image .This renders cleanliness and makes thresholding smoother.
 
 The results obtained using the edge detection algorithm for an image is shown below:
 
@@ -81,7 +80,7 @@ The results obtained using the edge detection algorithm for an image is shown be
 
 ### 3. Perspective transform
 
-The perspective transformation is computed using the functions `find_perspective_points` and `get_perspective_transform` in lines 52-147 of `project04.py`. `find_perspective_points` uses the method from [project1][Project 1] to detect lane lines. Since the lanes are approximated as lines, it can be used to extract four points that are actually on the road which can then be used as the "source" points for a perspective transform.
+The perspective transformation is computed using the functions `perpective_transform` of `lane_lines.py`. `find_perspective_points` uses the method from [project1][Project 1] to detect lane lines. Since the lanes are approximated as lines, it can be used to extract four points that are actually on the road which can then be used as the "source" points for a perspective transform.
 
 Here is a brief description of how ths works:
 
@@ -105,13 +104,12 @@ Both methods also use a sanity check which checks if the radius of curvature of 
 
 #### (a) Histogram Method
 
-The first step in this method is to compute the base points of the lanes. This is done in the `histogram_base_points` function in lines 352-366 of `project04.py`. The first step is to compute a histogram of the lower half of the thresholded image. The histogram corresponding to the thresholded, warped image in the previous section is shown below:
+The first step in this method is to compute the base points of the lanes. This is done in the `histogram_base_points` function in lines 352-366 of `lane_lines.py`. The first step is to compute a histogram of the lower half of the thresholded image. The histogram corresponding to the thresholded, warped image in the previous section is shown below:
 
-The `find_peaks_cwt` function from the `scipy.signal` is used to identify the peaks in the histogram. The indices thus obtained are further filtered to reject any below a certain minimum value as well as any peaks very close to the edges of the image. For the histogram shown above, the base points for the lanes are found to be at the points `297` and `1000`.
 
 Once the base points are found, a sliding window method is used to extract the lane pixels. This can be seen in the `sliding_window` function in lines 308-346. The algorithm splits the image into a number of horizontal bands (10 by default). Starting at the lowest band, a window of a fixed width (20% of image width) centered at both base points is considered. The x and y coordinates of all the nonzero pixels in these windows are compiled into into separate lists. The base point for the next band is assumed to be the column with the maximum number of pixels in the current band. After all the points are accumulated, the function `reject_outliers` is used to remove any points whose x or y coordinates are outside of two standard deviations from the mean value. This helps remove irrelevant pixels from the data.
 
-The filtered pixels are then passed into the `add_lane_pixels` method of the `Lane` class defined in lines 200-248. These pixels, along with a weighted average of prior lane pixels are used with `np.polyfit` to compute a second order polynomial that fits the points.
+These pixels, along with a weighted average of prior lane pixels are used with `np.polyfit` to compute a second order polynomial that fits the points.
 
 The polynomial is then used to create an image mask that describes a region of interest which is then used by the masking method in upcoming frames.
 
@@ -176,9 +174,9 @@ The effect of reversing this order, by applying the perspective transform first 
 
 [//]: # (References)
 
-[image1]: ./figures/fig1_undistort.png "Original and Undistorted images"
-[image3]: ./figures/fig3_edges.png "Thresholded Image"
-[image4]: ./figures/fig4_perspective.png "Warp Example"
-[image6]: ./figures/fig6_masks.png "Lane masks"
-[image7]: ./figures/fig7_result.png "Output"
+[image1]: ./figures/undistort.png "Undistorted images"
+[image3]: ./figures/threshold_edges.png "Thresholded Image"
+[image4]: ./figures/perpective.png "Warp Example"
+[image6]: ./figures/lane_mask.png "Lane masks"
+[image7]: ./figures/highlighted_lane.png "Output"
 [video1]: ./project_video_out.mp4 "Project video output"
