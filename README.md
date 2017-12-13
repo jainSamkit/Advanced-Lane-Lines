@@ -88,6 +88,8 @@ def gradient_color_thresh(image):
     return combined
 ```
 
+Apart from these,I also used morphological operations to get rid of the redundant noise in the images by using erosion followed by the dilation.
+
 #### Color Channels:
 I used S channel to sepertate out the highly staurated i.e. the ones that have more brightness and not the background to filter out the lane lines.However,the S channel picked up the lane lines but there was extra noise appearing as well especially when shadows of the trees appeared on the roads.L channel represent the amount of light and dark pixels in an image.Since the shadows are dark I filtered out thr L channel pixels with values lower than 80.This mostly removed the shadows from the images.The python code below depicts this:
 
@@ -118,7 +120,6 @@ def dir_threshold(img,  thresh=(0.7,1.3)):
     binary_output=sx_binary
     return binary_output
    ```
-
 
 ![alt text][image3]
 
@@ -152,7 +153,8 @@ I checked if my perpective transform was warping an image correctly by verifying
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+I learned the code mentioned on the Udacity forum to identify the lane lines .There were two methods to start finding the left and right hand side base(starting ) pixels namely histogram method and the other one sliding windows method.However histogram method was more robust on turnings as it didnt initially divide the frame into two halves and finds the peaks irrespective of the positions specified.Also,since I cleaned up the lower portions of the image that produced mostly the noise between the lanes by morphological opening operation ,the algorithm always picked up the correct starting pixels for both left and right positions.
+
 
 ![alt text][image5]
 
