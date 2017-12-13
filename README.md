@@ -8,168 +8,178 @@ The code I used for doing this project can be found in `project04.py` and `Proje
 
 ### Usage
 
+
+**Advanced Lane Finding Project**
+
+The goals / steps of this project are the following:
+
+* Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
+* Apply a distortion correction to raw images.
+* Use color transforms, gradients, etc., to create a thresholded binary image.
+* Apply a perspective transform to rectify binary image ("birds-eye view").
+* Detect lane pixels and fit to find the lane boundary.
+* Determine the curvature of the lane and vehicle position with respect to center.
+* Warp the detected lane boundaries back onto the original image.
+* Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
+
+[//]: # (Image References)
+
+[image1]: ./examples/undistort_output.png "Distorted"
+[image2]: 
+[image3]: ./test_images/test1.jpg "Road Transformed"
+[image4]: ./examples/binary_combo_example.jpg "Binary Example"
+[image5]: ./examples/warped_straight_lines.jpg "Warp Example"
+[image6]: ./examples/color_fit_lines.jpg "Fit Visual"
+[image7]: ./examples/example_output.jpg "Output"
+[video1]: ./project_video.mp4 "Video"
+
+## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
+
+### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
+
+### Camera Calibration
+
+#### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
+
+The code for camera calibration is contained in the lines 8-46 of my code in lane_lines.py. 
+
+I prepared two lists for objpoints and imagepoints to store corresponding real world undistorted image points and distorted image points as referred in the image.The object points are similar to the rectangular meshgrid provided by the opencv function as follows:
+objp=np.ones((9*6,3),np.float32)
+objp[:,:2]=np.mgrid[0:9,0:6].T.reshape(-1,2)
+
+First of all the objp is constructed which is array with height 9 and width 6 with three dimensions.After this the mgrid function constructs the integer coordinates corresponding to the image dimensions i.e height and width.
+
+A.) ret,corners=cv2.findChessboardCorners(gray,(9,6),None)
+The function at A is then used to find out the chessboard corners on the grayscale images.The imagepoints here are stored corresponding to the objectpoints here.
+
+Then the cv2.calibrateCamera function is used to find the undistortion matrix and corresponding coefficients.They have been used in the line 109 of my code.Line 115 of the file is used to undistort the image given the undistortion matrix. 
+
+There were some issues while in the calibration step which is to be discussed later.
+
+![Undistorted Image1][image1]
+
+### Pipeline (single images)
+
+#### 1. Provide an example of a distortion-corrected image.
+
+I have provided an image of an undistorted image that I further used to work upon for further transforms and wapring.
+![alt text][image2]
+
+#### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.
+
+I used the the combinations of different channels of the HLS image and the gradient thresholds to identify and depict the lane lines perfectly.The function gradient_color_thresh below shows how I used the gradient and color thresholds.
+```python 
+def gradient_color_thresh(image):
+    ksize=3
+    image=undistort(image)
+    gradx = abs_sobel_thresh(image, orient='x', thresh=(20, 200))
+    grady = abs_sobel_thresh(image, orient='y', thresh=(20, 200))
+    mag_binary = mag_thresh(image, mag_thresh=(20, 200))
+
+    dir_binary = dir_threshold(image, thresh=(0.7, 1.3))
+    color_binary=color_space(image,thresh=(100,255))
+    
+    combined = np.zeros_like(dir_binary)
+    combined[(color_binary==1)|((gradx == 1)& (grady == 1)) |(mag_binary==1) &(dir_binary==1)] = 1
+    kernel = np.ones((3,3),np.uint8)
+    morph_image=combined[600:,:950]
+    morph_image = cv2.morphologyEx(morph_image, cv2.MORPH_OPEN, kernel)
+    combined[600:,:950]=morph_image
+    return combined
 ```
-Project 04 - Advanced Lane Detection
 
-Usage:
-  project04.py <input_video> <output_video> [-c <camera_file>]
-  project04.py (-h | --help)
+#### Color Channels:
+I used S channel to sepertate out the highly staurated i.e. the ones that have more brightness and not the background to filter out the lane lines.However,the S channel picked up the lane lines but there was extra noise appearing as well especially when shadows of the trees appeared on the roads.L channel represent the amount of light and dark pixels in an image.Since the shadows are dark I filtered out thr L channel pixels with values lower than 80.This mostly removed the shadows from the images.The python code below depicts this:
 
-Options:
-  -h --help         Show this screen.
-  -c <camera_file>  Specify camera calibration file [default: camera_data.npz]
+```python
+def color_space(image,thresh=(170,255)):
+    hls=cv2.cvtColor(image,cv2.COLOR_RGB2HLS)
+    l_channel=hls[:,:,1]
+    
+    s_channel=hls[:,:,2]
+    s_binary=np.zeros_like(s_channel)
+    s_binary[(s_channel>=thresh[0]) & (s_channel<=thresh[1])& (l_channel>=80) ]=1
+    color_output=np.copy(s_binary)
+    return color_output
 ```
 
-To run the program with default settings on a video:
+#### Gradient Thresholds:
+I also used various gradient thresholds to seperate out the lane lines from the image.I also experimented with Roberts operator apart from the Sobel but Sobel came out to be a lot smoother while detecting the edges .Apart from using Sobel operators in X and Y directions ,I also used magnitude of the gradient and direction to seperate out the redundant lines from the image as well.
+The python code is attached below:
 
-`python project04.py input_video.mp4 output/output_video.mp4`
+```python
+def dir_threshold(img,  thresh=(0.7,1.3)):
+    gray=cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
+    sobelx=np.absolute(cv2.Sobel(gray,cv2.CV_64F,1,0))
+    sobely=np.absolute(cv2.Sobel(gray,cv2.CV_64F,0,1))
+    dir_=np.arctan2(sobely,sobelx)
+    sx_binary = np.zeros_like(gray)
+    sx_binary[(dir_>=thresh[0]) &(dir_<=thresh[1])]=1
+    binary_output=sx_binary
+    return binary_output
+   ```
 
-The camera calibration data gets saved into `camera_data.npz` by default and is reused in subsequent runs. If you want to change the camera information, delete the file, or specify a different filename using the `-c` command line argument.
+![alt text][image3]
+
+#### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
+
+The code for perpective tranform is done by the function perpective_transform in the line 242-249 in lane_lines.py. It takes an input image and applies warps it using source and destination points.
+
+```python
+    def perspective_transform(image):
+    src=np.float32([[195,720],[590,460],[700,460],[1120,720]])
+    dst=np.float32([[350,720],[410,0],[970,0],[1000,720]])
+    M = cv2.getPerspectiveTransform(src, dst)
+    Minv = cv2.getPerspectiveTransform(dst, src)
+    img_size=(image.shape[1],image.shape[0])
+    warped = cv2.warpPerspective(image, M, img_size, flags=cv2.INTER_LINEAR)
+    return warped
+```
+
+This resulted in the following source and destination points:
+
+| Source        | Destination   | 
+|:-------------:|:-------------:| 
+| 195, 720      | 350, 720        | 
+| 590,460      | 410,0     |
+| 700,460     | 970,0     |
+| 1120,720    | 1000,720       |
+
+I checked if my perpective transform was warping an image correctly by verifying it on the 
+![alt text][image4]
+
+#### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
+
+Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+
+![alt text][image5]
+
+#### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
+
+I did this in lines # through # in my code in `my_other_file.py`
+
+#### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
+
+I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+
+![alt text][image6]
 
 ---
-## Camera Calibration and Distortion Correction
 
+### Pipeline (video)
 
-The camera calibration code is contained in lines 25-50 in the functions `calibrate_camera` and `camera_setup`. The camera calibration information is cached using `numpy.savez_compressed` in the interest of saving time. The calibration is performed using chessboard pattern images taken using the same camera as the project videos, such as the one shown below:
+#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-![chessboard pattern](./camera_cal/calibration1.jpg)
-
-The chessboard pattern calibration images (in the `cal_images` folder) contain 9 and 6 corners in the horizontal and vertical directions, respectively (as shown above). First, a list of "object points", which are the (x, y, z) coordinates of these  chessboard corners in the real-world in 3D space, is compiled. The chessboard is assumed to be in the plane z=0, with the top-left corner at the origin. There is assumed to be unit spacing between the corners. These coordinates are stored in the array `objp`.
-
-```python
-  # cal_images contains names of calibration image files
-  for fname in cal_images:
-      img = cv2.imread(fname)
-      gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-      ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
-      if ret == True:
-          objpoints.append(objp)
-          imgpoints.append(corners)
-
-  ret, cam_mtx, cam_dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
-```
-
-For each calibration image, the image coordinates (x,y), of the chessboard corners are computed using the `cv2.findChessboardCorners` function. These are appended to the `imgpoints` array and the `objp` array is appended to the `objpoints` array.
-
-The two accumulated lists, `imgpoints` and `objpoints` are then passed into `cv2.calibrateCamera` to obtain the camera calibration and distortion coefficients as shown in the above code block. The input image is then undistorted (later in the image processing pipeline on line 409) using these coefficients and the `cv2.undistort` function.
-
-## Pipeline (single images)
-
-### 1. Example of Distortion corrected image
-
-The image from the camera is undistorted using the camera calibration matrix and distortion coefficients computed in the previous step. This is done using the `cv2.undistort` function as shown below:
-
-`undist = cv2.undistort(image, cam_mtx, cam_dist, None, cam_mtx)`
-
-An example of an image before and after the distortion correction procedure is shown below.
-
-![Example of Distortion corrected image][image1]
-
-### 2. Thresholding
-
-Initially a number of combinations of color and gradient thresholds were attempted. It was found that none of these were very robust to changing conditions in lighting and contrast. After reviewing some literature on the subject, it was found that using a second derivative operation (Laplacian) might be more suited to this purpose[1]. By using a Laplacian filter (using `cv2.Laplacian`) on the image followed by thresholding it to highlight only the negative values (denoting a dark-bright-dark edge) it was possible to reject many of the false positives [ [Ref](http://www.eng.utah.edu/~hamburge/Road_Marking_Features_and_Processing_Steps.pdf) ]. The Laplacian resulted in better results than using combinations of Sobel gradients.
-
-The thresholding operations used to detect edges in the images can be found `lane_lines.py` in the function called `gradient_color_thresh`. The gradient is applied in both x and y directions .Also magnitude of gradient and slopes i.e direction of the desired lines have been filtered out.Apart from this the color threshold is applied in S channel.I have also applied threshold in the L channel to remove dark areas in cases when there is overhead sun.
-
-Morphological operation such as opening is also applied to remove noise from the lower portion of the image .This renders cleanliness and makes thresholding smoother.
-
-The results obtained using the edge detection algorithm for an image is shown below:
-
-![Thresholding Example][image3]
-
-### 3. Perspective transform
-
-The perspective transformation is computed using the functions `perpective_transform` of `lane_lines.py`. `find_perspective_points` uses the method from [project1][Project 1] to detect lane lines. Since the lanes are approximated as lines, it can be used to extract four points that are actually on the road which can then be used as the "source" points for a perspective transform.
-
-Here is a brief description of how ths works:
-
-1. Perform thresholding/edge detection on the input image
-2. Mask out the upper 60% of pixels to remove any distracting features
-3. Use Hough transforms to detect the left and right lane markers
-4. Find the apex-point where the two lines intersect. Choose a point a little below that point to form a trapezoid with four points -- two base points of lane markers + upper points of trapezoid
-5. Pass these points along with a hardcoded set of destination points to `cv2.getPerspectiveTransform` to compute the perspective transformation matrix
-
-*Note: In case the hough transform fails to detect the lane markers, a hardcoded set of source points are used*
-
-The original and warped images along with the source points (computed dynamically) and destination points used to computed the perspective transform, are shown below:
-
-![Perspective Transform Example][image4]
-
-### 4. Lane Detection
-
-The lane detection was primarily performed using two methods -- histogram method and masking method. The latter only works when we have some prior knowledge about the location of the lane lines. A sanity check based on the radius of curvature of the lanes is used to assess the results of lane detection. If two many frames fail the sanity check, the algorithm reverts to the histogram method until the lane is detected again.
-
-Both methods also use a sanity check which checks if the radius of curvature of the lanes have changed too much from the previous frame. If the sanity check fails, the frame is considered to be a "dropped frame" and the previously calculated lane curve is used. If more than 16 dropped frames are consecutively encountered, the algorithm switches back to the histogram method.
-
-#### (a) Histogram Method
-
-The first step in this method is to compute the base points of the lanes. This is done in the `histogram_base_points` function in lines 352-366 of `lane_lines.py`. The first step is to compute a histogram of the lower half of the thresholded image. The histogram corresponding to the thresholded, warped image in the previous section is shown below:
-
-
-Once the base points are found, a sliding window method is used to extract the lane pixels. This can be seen in the `sliding_window` function in lines 308-346. The algorithm splits the image into a number of horizontal bands (10 by default). Starting at the lowest band, a window of a fixed width (20% of image width) centered at both base points is considered. The x and y coordinates of all the nonzero pixels in these windows are compiled into into separate lists. The base point for the next band is assumed to be the column with the maximum number of pixels in the current band. After all the points are accumulated, the function `reject_outliers` is used to remove any points whose x or y coordinates are outside of two standard deviations from the mean value. This helps remove irrelevant pixels from the data.
-
-These pixels, along with a weighted average of prior lane pixels are used with `np.polyfit` to compute a second order polynomial that fits the points.
-
-The polynomial is then used to create an image mask that describes a region of interest which is then used by the masking method in upcoming frames.
-
-#### (b) Masking Method
-
-![Lane masks][image6]
-
-This is the less computationally expensive procedure that is used when a lane has already been detected before. The previously detected lanes are used to define regions of interest where the lanes are likely to be in (shown in image above). This is implemented in the `detect_from_mask` method defined in lines 276-283. The algorithm uses the mask generated during the histogram method to remove irrelevant pixels and then uses all non-zero pixels found in the region of interest with the `add_lane_pixels` method to compute the polynomial describing the lane.
-
-### 5. Radius of curvature and vehicle position
-
-The radius of curvature is computed in the `compute_rad_curv` method of the Lane class in lines 251-257. The pixel values of the lane are scaled into meters using the scaling factors defined as follows:
-```python
-ym_per_pix = 30/720 # meters per pixel in y dimension
-xm_per_pix = 3.7/700 # meteres per pixel in x dimension
-```
-These values are then used to compute the polynomial coefficients in meters and then the formula given in the lectures is used to compute the radius of curvature.
-
-The position of the vehicle is computed by the code in lines 455-456. The camera is assumed to be centered in the vehicle and checks how far the midpoint of the two lanes is from the center of the image.
-
-```python
-middle = (left_fitx[-1] + right_fitx[-1])//2
-veh_pos = image.shape[1]//2
-dx = (veh_pos - middle)*xm_per_pix # Positive on right, Negative on left
-```
-
-## Summary and Result
-
-### Images
-
-The complete pipeline is defined in the `process_image` function in lines 355-475 that performs all these steps and then draws the lanes as well as the radius and position information on to the frame. The steps in the algorithm are:
-
-**Distortion correction → Edge Detection → Perspective Transform → Lane Detection (using Histogram or Masking methods) → Sanity Check**
-
-An example image that was run through the pipeline is shown below:
-![Final Image][image7]
-
-
-### Videos
-
-**Project video output**
-
-[![Project video output](https://img.youtube.com/vi/nuaE2jed1nk/0.jpg)](https://youtu.be/nuaE2jed1nk)
-
-This same video can also be found at:  [project_video_out.mp4](./project_videos_output/result_video.mp4)
+Here's a [link to my video result](./project_video.mp4)
 
 ---
-## Discussion
 
-The pipeline was able to detect and track the lanes reliably in  the project video. With some tweaks (reversing the warping/edge detection), it also worked well for the challenge video. The main issue with the challenge video was lack of contrast and false lines.
+### Discussion
 
-### (a) Gradient enhancement
-A color image can be converted to grayscale in many ways. The easiest is what is called equal-weight conversion where the red, green and blue values are given equal weights and averaged. However, the ratio between these weights can be modified to enhance the gradient of the edges of interest (such as lanes). According to Ref.2, grayscale images converted using the ratios 0.5 for red, 0.4 for green, and 0.1 for blue, are better at detecting yellow and white lanes. This method was used for converting images to gray scale in this project.
+#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-However, even this method faces problems under different color temperature illuminations, such as evening sun or artificial lighting conditions. A better method that continuously computes the best weighting vector based on prior frames is described in [2]. This was not implemented in this project due to time constraints, and because reasonable results were obtained for the project and challenge videos without the use of such a method. However, implementing such a method would make the pipeline a lot more robust to change in contrast and illumination.
+Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
 
-### (b) A note on order of operations
-In the pipeline described in the lectures, the perspective transform was applied after the edges were detected in the image using some thresholding techniques (described in a later section).
-
-The effect of reversing this order, by applying the perspective transform first and then applying the edge detection was also examined. It was found that with the current set of hyper-parameters used for edge detection, the reverse process was able to reject more "distractions" at the cost of a decrease in the number of lane pixels found. This was particularly of interest in some parts of the challenge video. Here is an example of an image where the order of thresholding and warping made a difference:
 
 
 [//]: # (References)
