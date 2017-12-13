@@ -119,6 +119,7 @@ def dir_threshold(img,  thresh=(0.7,1.3)):
     return binary_output
    ```
 
+
 ![alt text][image3]
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
@@ -145,7 +146,8 @@ This resulted in the following source and destination points:
 | 700,460     | 970,0     |
 | 1120,720    | 1000,720       |
 
-I checked if my perpective transform was warping an image correctly by verifying it on the 
+I checked if my perpective transform was warping an image correctly by verifying it on the straight lines.Since I know the straight lines would remain strictly vertical after warping,it provided the strict measure to check if the lines are warped accurately or not.
+
 ![alt text][image4]
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
