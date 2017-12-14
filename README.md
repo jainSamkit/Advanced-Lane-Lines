@@ -4,9 +4,7 @@ Finding the curved lane lines for self driving car
 [![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
 ## README
-The code I used for doing this project can be found in `project04.py` and `Project04.ipynb`. All the line numbers I refer to in this document is for `project04.py`. The following sections go into further detail about the specific points described in the [Rubric](https://review.udacity.com/#!/rubrics/571/view).
-
-### Usage
+The code I used for doing this project can be found in `lane_lines.py`.
 
 
 **Advanced Lane Finding Project**
@@ -22,10 +20,6 @@ The goals / steps of this project are the following:
 * Warp the detected lane boundaries back onto the original image.
 * Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 
-```[//]: # (Image References)
-
-[image1]: ./examples/undistort_output.png "Distorted"
-```
 
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -166,7 +160,7 @@ vehicle_position=image.shape[1]//2
 
 I implemented this step in lines 522-550 in my code `lane_lines.py` in the function `pipeline()`.  Here is an example of my result on a test image:
 
-![alt text][image7]
+![alt text][image6]
 
 ---
 
@@ -188,9 +182,10 @@ However I
 
 [//]: # (References)
 
-[image1]: ./figures/undistort.png "Undistorted images"
+[image1]: ./figures/undistorted_image.png "Undistorted_chess image"
+[image2]: ./figures/undistort.png "Undistorted_lane image"
 [image3]: ./figures/threshold_edges.png "Thresholded Image"
 [image4]: ./figures/perpective.png "Warp Example"
 [image5]: ./figures/lane_mask.png "Lane masks"
-[image7]: ./figures/highlighted_lane.png "Output"
+[image6]: ./figures/highlighted_lane.png "Output"
 [video1]: ./project_videos_output/result_video.mp4 "Project video output"
