@@ -114,6 +114,12 @@ ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.sh
 
 dst = cv2.undistort(ref_image, mtx, dist, None, mtx)
 
+f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
+ax1.imshow(ref_image)
+ax1.set_title('Original_Image',fontsize=50)
+ax2.imshow(ref_image)
+ax2.set_title('Distorted_Image',fontsize=50)
+
 
 # In[15]:
 
