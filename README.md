@@ -176,7 +176,7 @@ Here's a [link to my video result](./project_videos_output/result_video.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-However the lanes are being detected for both the straight lines and curved images but the pipeline is not very robust to the shadows and changing brightness.The other way is to depict and draw the lines manually on the continued predicted slope and then the image should be warped.The continuity equation in physics can be helpul in modelling the lines which flow in a particular order.I will try to come out with a better solution determined by a differential equation.Other than this,I have worled in color spaces such as HLS ,HUV ,GRAY and RGB for the project.S and L channels probed to be most robust!
+However the lanes are being detected for both the straight lines and curved images but the pipeline is not very robust to the shadows and changing brightness.The other way is to depict and draw the lines manually on the continued predicted slope and then the image should be warped.The continuity equation in physics can be helpful in modeling the lines which flow in a particular order.I will try to come out with a better solution determined by a differential equation.Other than this,I have worked on color spaces such as HLS ,HUV ,GRAY and RGB for the project.S and L channels proved to be most robust!
 
 
 
