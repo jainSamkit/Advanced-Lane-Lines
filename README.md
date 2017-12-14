@@ -25,13 +25,7 @@ The goals / steps of this project are the following:
 [//]: # (Image References)
 
 [image1]: ./examples/undistort_output.png "Distorted"
-[image2]: 
-[image3]: ./test_images/test1.jpg "Road Transformed"
-[image4]: ./examples/binary_combo_example.jpg "Binary Example"
-[image5]: ./examples/warped_straight_lines.jpg "Warp Example"
-[image6]: ./examples/color_fit_lines.jpg "Fit Visual"
-[image7]: ./examples/example_output.jpg "Output"
-[video1]: ./project_video.mp4 "Video"
+
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
@@ -155,12 +149,17 @@ I checked if my perpective transform was warping an image correctly by verifying
 
 I learned the code mentioned on the Udacity forum to identify the lane lines .There were two methods to start finding the left and right hand side base(starting ) pixels namely histogram method and the other one sliding windows method.However histogram method was more robust on turnings as it didnt initially divide the frame into two halves and finds the peaks irrespective of the positions specified.Also,since I cleaned up the lower portions of the image that produced mostly the noise between the lanes by morphological opening operation ,the algorithm always picked up the correct starting pixels for both left and right positions.
 
+I used the left and right lane pixel coordinated in the right and left lane of the warped image to fit the polynomial.However I didnt use the past data of the left and right lane fit as it was not robust in the case of shadows.I tried going back to two or three frames and the result improved.However,I chose to stick with finding histogram peaks every frame.
 
 ![alt text][image5]
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+I achieved this through the lines 564-584 in the function pipeline of the file lane_lines.py.Here I first fit the left and right lane polynomial on the warped image.Threafter I used the mean of right and left image to find the lane middle coordinates.After this I assumed the vehicle position to be the middle of the width of the frame,though it was a rough estimate.I cnverted all the pixels to metres as roughly directed by the Udacity.
+
+```python code
+vehicle_position=image.shape[1]//2
+```
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
@@ -191,6 +190,6 @@ Here I'll talk about the approach I took, what techniques I used, what worked an
 [image1]: ./figures/undistort.png "Undistorted images"
 [image3]: ./figures/threshold_edges.png "Thresholded Image"
 [image4]: ./figures/perpective.png "Warp Example"
-[image6]: ./figures/lane_mask.png "Lane masks"
+[image5]: ./figures/lane_mask.png "Lane masks"
 [image7]: ./figures/highlighted_lane.png "Output"
 [video1]: ./project_videos_output/result_video.mp4 "Project video output"
