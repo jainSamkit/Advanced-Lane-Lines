@@ -10,81 +10,91 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 get_ipython().magic('matplotlib inline')
 import glob
-get_ipython().magic('matplotlib qt')
+# %matplotlib qt
+import os
+get_ipython().magic('load_ext autoreload')
+get_ipython().magic('autoreload 2')
+import importlib
+
+
+# # Importing calibration file
+
+# In[2]:
+
+
+from support_files import cal_and_undistort
 
 
 # # Sraight images and curved images
 
-# In[5]:
+# In[3]:
 
 
 straight_images=glob.glob('test_images/straight_lines*.jpg')
 curved_images=glob.glob('test_images/test*.jpg')
 
 
-# In[2]:
-
-
-images=glob.glob('camera_cal/calibration*.jpg')
-objpoints=[]
-imgpoints=[]
-
-
-# # Defining meshgrid for 9*6 chessboard
-
-# In[3]:
-
-
-objp=np.ones((9*6,3),np.float32)
-objp[:,:2]=np.mgrid[0:9,0:6].T.reshape(-1,2)
-
-
-# # Drawing chess_board corners
+# # Calibrating Camera
 
 # In[4]:
 
 
-for image in images:
-    img=mpimg.imread(image)
-    gray=cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
-    ret,corners=cv2.findChessboardCorners(gray,(9,6),None)
-    
-    if ret==True:
-        imgpoints.append(corners)
-        objpoints.append(objp)
-        
-        img=cv2.drawChessboardCorners(img,(9,6),corners,ret)
-        plt.imshow(img)
-    else:
-        print(image)
+ret, mtx, dist, rvecs, tvecs = cal_and_undistort.calib(os.path.join('camera_cal','*jpg'))
 
 
-# # Calibrating Camera
-
-# In[6]:
+# In[86]:
 
 
-ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.T.shape, None, None,flags=cv2.CALIB_USE_INTRINSIC_GUESS)
+mtx=np.array([[  2.62633388e+03,   0.00000000e+00,   6.53633687e+02],
+       [  0.00000000e+00,   3.09765919e+03,   3.31295828e+02],
+       [  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]])
+
+dist=np.array([[ -2.37078716e+00,   3.99793678e+01,   2.16836492e-02,
+         -1.09082278e-02,  -4.97428018e+02]])
 
 
 # # Undistorting Image
 
-# In[166]:
+# In[5]:
 
 
-def undistort(image):
-    return cv2.undistort(image, mtx, dist, None, mtx)
+image=straight_images[0]
+image=mpimg.imread(image)
 
 
-# In[ ]:
+# In[6]:
 
 
+undist_image=cal_and_undistort.undistort(image,mtx,dist)
 
+
+# In[7]:
+
+
+plt.imshow(undist_image)
 
 
 # # Gradient & Color Thresholds
 
-# In[162]:
+# In[8]:
+
+
+from support_files.thresholding import *
+
+
+# In[9]:
+
+
+thresh_image=gradient_color_thresh(undist_image)
+
+
+# In[10]:
+
+
+plt.imshow(thresh_image)
+
+
+# In[11]:
 
 
 def abs_sobel_thresh(image,orient,  thresh=(20, 100)):
@@ -159,7 +169,7 @@ def segregate_white_line(image,thresh=(200,255)):
 
 # # Function to call gradient and color thresholding
 
-# In[164]:
+# In[12]:
 
 
 def gradient_color_thresh(image):
@@ -196,7 +206,7 @@ def gradient_color_thresh(image):
 
 # # Perspective Transform
 
-# In[183]:
+# In[13]:
 
 
 def perspective_transform(image):
@@ -205,23 +215,35 @@ def perspective_transform(image):
     M = cv2.getPerspectiveTransform(src, dst)
     Minv = cv2.getPerspectiveTransform(dst, src)
     img_size=(image.shape[1],image.shape[0])
+    print(M.shape,Minv.shape)
     warped = cv2.warpPerspective(image, M, img_size, flags=cv2.INTER_LINEAR)
-    return warped,Minv
+    return warped,Minv,M
 
 
-# In[ ]:
+# In[14]:
 
 
+binary_warped,Minv,M=perspective_transform(thresh_image)
 
+
+# In[15]:
+
+
+M.shape
+
+
+# In[16]:
+
+
+plt.imshow(binary_warped)
 
 
 # # Pipeline to detect lanes
 
-# In[193]:
+# In[17]:
 
 
-def pipeline(warped,image,left_fit,right_fit,count,Minv):
-    binary_warped=warped
+def pipeline(binary_warped,count,image):
     if count==0:
         # Assuming you have created a warped binary image called "binary_warped"
         # Take a histogram of the bottom half of the image
@@ -299,14 +321,7 @@ def pipeline(warped,image,left_fit,right_fit,count,Minv):
         left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
         right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
 
-    #     out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
-    #     out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
-    #     plt.imshow(out_img)
-    #     plt.plot(left_fitx, ploty, color='yellow')
-    #     plt.plot(right_fitx, ploty, color='yellow')
-    #     plt.xlim(0, 1280)
-    #     plt.ylim(720, 0)
-        warp_zero = np.zeros_like(warped).astype(np.uint8)
+        warp_zero = np.zeros_like(binary_warped).astype(np.uint8)
         color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
         # Minv = cv2.getPerspectiveTransform(dst, src)
         # Recast the x and y points into usable format for cv2.fillPoly()
@@ -321,65 +336,99 @@ def pipeline(warped,image,left_fit,right_fit,count,Minv):
         newwarp = cv2.warpPerspective(color_warp, Minv, (image.shape[1], image.shape[0])) 
         # Combine the result with the original image
         result = cv2.addWeighted(image, 1, newwarp, 0.3, 0)
-#         ploty = np.linspace(0, 719, num=720)# to cover same y-range as image
-#         quadratic_coeff = 3e-4 # arbitrary quadratic coefficient
-#         # For each y position generate random x position within +/-50 pix
-#         # of the line base position in each case (x=200 for left, and x=900 for right)
-#         leftx = np.array([200 + (y**2)*quadratic_coeff + np.random.randint(-50, high=51) 
-#                                       for y in ploty])
-#         rightx = np.array([900 + (y**2)*quadratic_coeff + np.random.randint(-50, high=51) 
-#                                         for y in ploty])
-
-#         leftx = leftx[::-1]  # Reverse to match top-to-bottom in y
-#         rightx = rightx[::-1]  # Reverse to match top-to-bottom in y
-
-
-        # Fit a second order polynomial to pixel positions in each fake lane line
-#         left_fit = np.polyfit(ploty, leftx, 2)
-#         left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
-#         right_fit = np.polyfit(ploty, rightx, 2)
-#         right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
-        y_eval = np.max(ploty)
-        print(y_eval)
-        left_curverad = ((1 + (2*left_fit[0]*y_eval + left_fit[1])**2)**1.5) / np.absolute(2*left_fit[0])
-        right_curverad = ((1 + (2*right_fit[0]*y_eval + right_fit[1])**2)**1.5) / np.absolute(2*right_fit[0])
         
-        ym_per_pix = 3.0/720 # meters per pixel in y dimension
-        xm_per_pix = 3.7/700 # meters per pixel in x dimension
-
-        # Fit new polynomials to x,y in world space
-        left_fit_cr = np.polyfit(ploty*ym_per_pix, leftx*xm_per_pix, 2)
-        right_fit_cr = np.polyfit(ploty*ym_per_pix, rightx*xm_per_pix, 2)
-        # Calculate the new radii of curvature
-        left_curverad = ((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
-        right_curverad = ((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
-        middle = (left_fitx[-1] + right_fitx[-1])//2
-        veh_pos = image.shape[1]//2
-        dx = (veh_pos - middle)*xm_per_pix # Positive if on right, Negative on left
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(result,'Left radius of curvature  = %.2f m'%(left_curverad),(50,50), font, 1,(255,255,255),2,cv2.LINE_AA)
-        cv2.putText(result,'Right radius of curvature = %.2f m'%(right_curverad),(50,80), font, 1,(255,255,255),2,cv2.LINE_AA)
-        cv2.putText(result,'Vehicle position : %.2f m %s of center'%(abs(dx), 'left' if dx < 0 else 'right'),(50,110),
+        y_eval=700
+        mid_x=640
+        ym_per_pix=3.0/72.0
+        xm_per_pix=3.7/650.0 #HardCoded
+        
+        c1=(2*right_fit[0]*y_eval+right_fit[1])*xm_per_pix/ym_per_pix
+        c2=2*right_fit[0]*xm_per_pix/(ym_per_pix**2)
+        
+        curvature=((1+c1*c1)**1.5)/(np.absolute(c2))
+        
+        left_pos=(left_fit[0]*(y_eval**2))+(left_fit[1]*y_eval)+left_fit[2]
+        right_pos=(right_fit[0]*(y_eval**2))+(right_fit[1]*y_eval)+right_fit[2]
+        
+        dx=((left_pos+right_pos)/2-mid_x)*xm_per_pix
+        if dx>0:
+            text='Right'
+        else:
+            text='Left'
+        
+        font=cv2.FONT_HERSHEY_SIMPLEX
+        cv2.putText(result,'Radius of curvature  = %.2f m'%(curvature),(20,50), font, 1,(255,255,255),2,cv2.LINE_AA)
+        
+        cv2.putText(result,'Vehicle position : %.2f m %s of center'%(abs(dx), text),(20,90),
                         font, 1,(255,255,255),2,cv2.LINE_AA)
-#         print(dx)
-        count=count+1
+        
         return result
     
 
 
-# In[185]:
+# In[18]:
+
+
+count=0
+
+
+# In[19]:
+
+
+result=pipeline(binary_warped,count,image)
+
+
+# In[20]:
+
+
+plt.imshow(result)
+
+
+# In[21]:
 
 
 from moviepy.editor import VideoFileClip
 from IPython.display import HTML
 
 
-# In[186]:
+# In[35]:
 
 
-left_fit=[]
-right_fit=[]
-count=0
+from support_files.pipeline import pipeline
+from support_files.draw_line import line
+
+
+# In[38]:
+
+
+line_=line()
+pipeline.set_vals(line_,mtx,dist,M,Minv)
+video_output = 'project_videos_output/new_result_video.mp4'
+clip1 = VideoFileClip("project_video.mp4")
+video_clip = clip1.fl_image(pipeline.Pipeline)
+get_ipython().magic('time video_clip.write_videofile(video_output, audio=False)')
+
+
+# In[39]:
+
+
+line_=line()
+pipeline.set_vals(line_,mtx,dist,M,Minv)
+video_output = 'project_videos_output/new_result_challenge_video.mp4'
+clip1 = VideoFileClip("challenge_video.mp4")
+video_clip = clip1.fl_image(pipeline.Pipeline)
+get_ipython().magic('time video_clip.write_videofile(video_output, audio=False)')
+
+
+# In[41]:
+
+
+line_=line()
+pipeline.set_vals(line_,mtx,dist,M,Minv)
+video_output = 'project_videos_output/new_result_harder_challenge_video.mp4'
+clip1 = VideoFileClip("harder_challenge_video.mp4")
+video_clip = clip1.fl_image(pipeline.Pipeline)
+get_ipython().magic('time video_clip.write_videofile(video_output, audio=False)')
 
 
 # In[187]:
@@ -392,42 +441,6 @@ def process_image(image):
     warped,Minv=perspective_transform(thresh_image)
     result=pipeline(warped,undist_image,left_fit,right_fit,count,Minv)
     return result
-
-
-# In[195]:
-
-
-video_output = 'project_videos_output/new_result_video.mp4'
-## To speed up the testing process you may want to try your pipeline on a shorter subclip of the video
-## To do so add .subclip(start_second,end_second) to the end of the line below
-## Where start_second and end_second are integer values representing the start and end of the subclip
-## You may also uncomment the following line for a subclip of the first 5 seconds
-clip1 = VideoFileClip("project_video.mp4").subclip(36,38)
-# clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4")
-video_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
-get_ipython().magic('time video_clip.write_videofile(video_output, audio=False)')
-
-
-# In[170]:
-
-
-image=mpimg.imread(straight_images[0])
-image=cv2.undistort(image, mtx, dist, None, mtx)
-res_image=gradient_color_thresh(image)
-
-
-# In[171]:
-
-
-plt.imshow(image)
-plt.show()
-
-
-# In[172]:
-
-
-plt.imshow(res_image)
-plt.show()
 
 
 # In[ ]:
