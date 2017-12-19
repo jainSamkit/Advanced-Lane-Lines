@@ -154,14 +154,14 @@ class pipeline:
         
         cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
         newwarp = cv2.warpPerspective(color_warp, Minv, (img.shape[1], img.shape[0]))
-        result = cv2.addWeighted(img, 1, newwarp, 0.3, 0)
+        result = cv2.addWeighted(undist_img, 1, newwarp, 0.3, 0)
         
         font = cv2.FONT_HERSHEY_SIMPLEX
         dx=line.vehicle_position()
         if dx>0:
-            text='Right'
-        else:
             text='Left'
+        else:
+            text='Right'
         
         cv2.putText(result,'Radius of curvature  = %.2f m'%(line.curvature),(50,50), font, 1,(255,255,255),2,cv2.LINE_AA)
         

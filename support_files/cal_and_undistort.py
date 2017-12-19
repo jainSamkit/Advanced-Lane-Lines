@@ -21,18 +21,18 @@ def calib(path):
     objpoints=[]
     imgpoints=[]
     
-    objp=np.ones((9*6,3),np.float32)
+    objp=np.zeros((9*6,3),np.float32)
     objp[:,:2]=np.mgrid[0:9,0:6].T.reshape(-1,2)
     for image in images:
         img=mpimg.imread(image)
         gray=cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
         ret,corners=cv2.findChessboardCorners(gray,(9,6),None)
     
-    if ret==True:
-        imgpoints.append(corners)
-        objpoints.append(objp)
+        if ret==True:
+            imgpoints.append(corners)
+            objpoints.append(objp)
     
-    objp=np.ones((6*5,3),np.float32)
+    objp=np.zeros((6*5,3),np.float32)
     objp[:,:2]=np.mgrid[0:6,0:5].T.reshape(-1,2)
     
     extra_images=['./camera_cal/calibration4.jpg']
@@ -46,7 +46,7 @@ def calib(path):
             objpoints.append(objp)
             
             
-    objp=np.ones((9*5,3),np.float32)
+    objp=np.zeros((9*5,3),np.float32)
     objp[:,:2]=np.mgrid[0:9,0:5].T.reshape(-1,2)
 
     extra_images=['./camera_cal/calibration1.jpg']
@@ -59,7 +59,7 @@ def calib(path):
             imgpoints.append(corners)
             objpoints.append(objp)
             
-    objp=np.ones((7*5,3),np.float32)
+    objp=np.zeros((7*5,3),np.float32)
     objp[:,:2]=np.mgrid[0:7,0:5].T.reshape(-1,2)
 
     extra_images=['./camera_cal/calibration5.jpg']
@@ -76,7 +76,7 @@ def calib(path):
     ref_image=mpimg.imread(ref_image)
     gray=cv2.cvtColor(ref_image,cv2.COLOR_RGB2GRAY)
     
-    return cv2.calibrateCamera(objpoints, imgpoints, gray.T.shape, None, None,flags=cv2.CALIB_USE_INTRINSIC_GUESS)
+    return cv2.calibrateCamera(objpoints, imgpoints, gray.T.shape, None, None)
 
 
 # In[11]:
