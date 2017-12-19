@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[29]:
 
 
 import numpy as np
@@ -19,7 +19,7 @@ import importlib
 
 # # Importing calibration file
 
-# In[2]:
+# In[23]:
 
 
 from support_files import cal_and_undistort
@@ -27,7 +27,7 @@ from support_files import cal_and_undistort
 
 # # Sraight images and curved images
 
-# In[3]:
+# In[24]:
 
 
 straight_images=glob.glob('test_images/straight_lines*.jpg')
@@ -36,7 +36,7 @@ curved_images=glob.glob('test_images/test*.jpg')
 
 # # Calibrating Camera
 
-# In[4]:
+# In[33]:
 
 
 ret, mtx, dist, rvecs, tvecs = cal_and_undistort.calib(os.path.join('camera_cal','*jpg'))
@@ -53,22 +53,36 @@ dist=np.array([[ -2.37078716e+00,   3.99793678e+01,   2.16836492e-02,
          -1.09082278e-02,  -4.97428018e+02]])
 
 
+# In[34]:
+
+
+ref_img=cv2.imread('camera_cal/calibration1.jpg')
+plt.imshow(ref_img)
+
+
+# In[35]:
+
+
+undist_ref_img=cal_and_undistort.undistort(ref_img,mtx,dist)
+plt.imshow(undist_ref_img)
+
+
 # # Undistorting Image
 
-# In[5]:
+# In[36]:
 
 
 image=straight_images[0]
 image=mpimg.imread(image)
 
 
-# In[6]:
+# In[37]:
 
 
 undist_image=cal_and_undistort.undistort(image,mtx,dist)
 
 
-# In[7]:
+# In[38]:
 
 
 plt.imshow(undist_image)
@@ -76,25 +90,25 @@ plt.imshow(undist_image)
 
 # # Gradient & Color Thresholds
 
-# In[8]:
+# In[39]:
 
 
 from support_files.thresholding import *
 
 
-# In[9]:
+# In[40]:
 
 
 thresh_image=gradient_color_thresh(undist_image)
 
 
-# In[10]:
+# In[41]:
 
 
 plt.imshow(thresh_image)
 
 
-# In[11]:
+# In[42]:
 
 
 def abs_sobel_thresh(image,orient,  thresh=(20, 100)):
@@ -169,7 +183,7 @@ def segregate_white_line(image,thresh=(200,255)):
 
 # # Function to call gradient and color thresholding
 
-# In[12]:
+# In[43]:
 
 
 def gradient_color_thresh(image):
@@ -206,7 +220,7 @@ def gradient_color_thresh(image):
 
 # # Perspective Transform
 
-# In[13]:
+# In[44]:
 
 
 def perspective_transform(image):
@@ -220,19 +234,19 @@ def perspective_transform(image):
     return warped,Minv,M
 
 
-# In[14]:
+# In[45]:
 
 
 binary_warped,Minv,M=perspective_transform(thresh_image)
 
 
-# In[15]:
+# In[46]:
 
 
 M.shape
 
 
-# In[16]:
+# In[47]:
 
 
 plt.imshow(binary_warped)
@@ -240,10 +254,10 @@ plt.imshow(binary_warped)
 
 # # Pipeline to detect lanes
 
-# In[17]:
+# In[48]:
 
 
-def pipeline(binary_warped,count,image):
+def pipeline(binary_warped,count,image,undist_image):
     if count==0:
         # Assuming you have created a warped binary image called "binary_warped"
         # Take a histogram of the bottom half of the image
@@ -335,7 +349,7 @@ def pipeline(binary_warped,count,image):
         # Warp the blank back to original image space using inverse perspective matrix (Minv)
         newwarp = cv2.warpPerspective(color_warp, Minv, (image.shape[1], image.shape[0])) 
         # Combine the result with the original image
-        result = cv2.addWeighted(image, 1, newwarp, 0.3, 0)
+        result = cv2.addWeighted(undist_image, 1, newwarp, 0.3, 0)
         
         y_eval=700
         mid_x=640
@@ -352,9 +366,9 @@ def pipeline(binary_warped,count,image):
         
         dx=((left_pos+right_pos)/2-mid_x)*xm_per_pix
         if dx>0:
-            text='Right'
-        else:
             text='Left'
+        else:
+            text='Right'
         
         font=cv2.FONT_HERSHEY_SIMPLEX
         cv2.putText(result,'Radius of curvature  = %.2f m'%(curvature),(20,50), font, 1,(255,255,255),2,cv2.LINE_AA)
@@ -366,44 +380,44 @@ def pipeline(binary_warped,count,image):
     
 
 
-# In[18]:
+# In[49]:
 
 
 count=0
 
 
-# In[19]:
+# In[50]:
 
 
-result=pipeline(binary_warped,count,image)
+result=pipeline(binary_warped,count,image,undist_image)
 
 
-# In[20]:
+# In[51]:
 
 
 plt.imshow(result)
 
 
-# In[21]:
+# In[52]:
 
 
 from moviepy.editor import VideoFileClip
 from IPython.display import HTML
 
 
-# In[35]:
+# In[53]:
 
 
 from support_files.pipeline import pipeline
 from support_files.draw_line import line
 
 
-# In[38]:
+# In[54]:
 
 
 line_=line()
 pipeline.set_vals(line_,mtx,dist,M,Minv)
-video_output = 'project_videos_output/new_result_video.mp4'
+video_output = 'project_videos_output/new_result_video1.mp4'
 clip1 = VideoFileClip("project_video.mp4")
 video_clip = clip1.fl_image(pipeline.Pipeline)
 get_ipython().magic('time video_clip.write_videofile(video_output, audio=False)')
